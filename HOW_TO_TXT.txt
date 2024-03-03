@@ -1,0 +1,223 @@
+# instaluję potrzebne biblioteki
+import requests			#request umożliwia komunikację API
+import tkinter as tk
+from tkinter import ttk
+import tkinter.messagebox	#potrzebne dla gui - tworzenie okienka, które wyświetla wynik
+import matplotlib.pyplot as plt		#tworzenie wykresów
+import pandas as pd			#biblioteka związana z analizą danych
+
+
+class CurrencyConverterGUI:
+    def __init__(self):
+        self.myapp = tk.Tk()        # Utworzenie okna głównego.
+		#wypisanie tekstu
+        self.currency_label = tk.Label(text='Wybierz walutę: ')
+		#tworzenie combobox,które pozwalają na wybór waluty
+        self.combobox = ttk.Combobox(self.myapp, textvariable=tk.StringVar())
+		#listy z wartościami do wyboru
+        self.combobox['values'] = ('bat (Tajlandia)',
+                                   'dolar amerykański',
+                                   'dolar australijski',
+                                   'dolar Hongkongu',
+                                   'dolar kanadyjski',
+                                   'dolar nowozelandzki',
+                                   'dolar singapurski',
+                                   'euro')
+        self.combobox_dates = ttk.Combobox(self.myapp, textvariable=tk.StringVar())
+        self.combobox_dates['values'] = ('THB', 'USD', 'AUD', 'HKD', 'CAD', 'NZD', 'SGD', 'EUR')
+        self.combobox_trend = ttk.Combobox(self.myapp, textvariable=tk.StringVar())
+        self.combobox_trend['values'] = ('THB', 'USD', 'AUD', 'HKD', 'CAD', 'NZD', 'SGD', 'EUR')
+		# wypisanie tekstu - tk.Label()
+        self.quantity_label = tk.Label(text='Podaj ilość: ')
+		# utworzeie pola do wpisania danych przez użytkownika - tk.Entry()
+        self.quantity_entry = tk.Entry(width=15)
+        self.code_label = tk.Label(text='Wybierz walutę: ')
+        self.startDate_label = tk.Label(text='Podaj datę początkową w formacie RRRR-MM-DD: ')
+        self.startDate_entry = tk.Entry(width=20)
+        self.endDate_label = tk.Label(text='Podaj datę końcową w formacie RRRR-MM-DD: ')
+        self.endDate_entry = tk.Entry(width=20)
+        self.currency_trend_label = tk.Label(text='Wybierz walutę: ') 
+        self.rates_number_label = tk.Label(text='Podaj ilość dni: ')
+        self.rates_number_entry = tk.Entry(width=15)
+# rozłożenie tekstu, miejsc przeznaczonych do wpisania przez użytkownika i combobox na ekranie 
+# .grid(kolumna, wiersz, położenie w wybranej komórce (W - na prawo), dodatkowa przestrzeń na lewo i prawo)
+        self.currency_label.grid(column=0, row=0, sticky=tk.W, pady=2)
+        self.combobox.grid(column=1, row=0, sticky=tk.W, pady=2)
+        self.quantity_label.grid(column=0, row=1, sticky=tk.W, pady=2)
+        self.quantity_entry.grid(column=1, row=1, sticky=tk.W, pady=2)
+        self.code_label.grid(column=2, row=0, sticky=tk.W, pady=2)
+        self.combobox_dates.grid(column=3, row=0, sticky=tk.W, pady=2)
+        self.startDate_label.grid(column=2, row=1, sticky=tk.W, pady=2)
+        self.startDate_entry.grid(column=3, row=1, sticky=tk.W, pady=2)
+        self.endDate_label.grid(column=2, row=2, sticky=tk.W, pady=2)
+        self.endDate_entry.grid(column=3, row=2, sticky=tk.W, pady=2)
+        self.currency_trend_label.grid(column=4, row=0, sticky=tk.W, pady=2)
+        self.combobox_trend.grid(column=5, row=0, sticky=tk.W, pady=2)
+        self.rates_number_label.grid(column=4, row=1, sticky=tk.W, pady=2)
+        self.rates_number_entry.grid(column=5, row=1, sticky=tk.W, pady=2)
+# dodanie przycisków wykonujących program
+        self.doing_button = tk.Button(text='Przelicz', command=self.change)
+        self.date_button = tk.Button(text='Narysuj wykres', command=self.wykres)
+        self.quit_button = tk.Button(text='Zakończ', command=self.myapp.destroy)
+        self.trend_button = tk.Button(text='Przedstaw linię trendu.', command=self.linia_trendu)
+# umiejscowienie przycisków na ekranie
+        self.doing_button.grid(column=0, row=2, sticky=tk.W, pady=2)
+        self.date_button.grid(column=2, row=3, sticky=tk.W, pady=2)
+        self.quit_button.grid(column=5, row=4, sticky=tk.W, pady=2)
+        self.trend_button.grid(column=4, row=2, sticky=tk.W, pady=2)
+# Wejście do pętli głównej tkinter
+        tk.mainloop()
+
+
+# definicja, która przelicza daną ilość waluty wybranej przez użytkownika na złotówki
+    def change(self):
+# pobranie aktualnych kursów walut
+        body = requests.get('http://api.nbp.pl/api/exchangerates/tables/A/')
+        response = body.json()
+#wczytanie danych od użytkownika
+        currency = self.combobox.get()
+        quantity = float(self.quantity_entry.get())
+        for rates in response[0]['rates']:
+            if currency == rates['currency']:
+# odanlezienie waluty wybranej przez użytkownika
+                result = quantity * float(rates['mid'])
+# przeliczenie ilości * obecny kurs
+                tk.messagebox.showinfo('Zatem otrzymasz:', str(result))
+# wyświetlenie ile w złotówkach użytkownik może otrzymać
+
+
+# definicja torząca listę z datami, według zakresu podanego przez użytkownika
+    def dates2(self):
+# utworzenie listy
+        dates2_array = []
+# wczytanie waluty, daty początkowej i daty końcowej podanej przez użytkownika
+        code = self.combobox_dates.get()
+        start_date = self.startDate_entry.get()
+        end_date = self.endDate_entry.get()
+# pobranie kursów waluty z podanego zakresu
+        adres_dates2 = f"http://api.nbp.pl/api/exchangerates/rates/A/{code}/{start_date}/{end_date}/"
+        body_dates2 = requests.get(adres_dates2)
+        response_dates2 = body_dates2.json()
+        if code == response_dates2['code']:
+#odszukanie danej waluty
+            for i in range(len(response_dates2["rates"])):
+                date = response_dates2["rates"][i]["effectiveDate"]
+# dodawanie kolejnych dat do listy
+                dates2_array.append(date)
+# zamiana elementów listy za datatime
+        dates2_array = pd.to_datetime(dates2_array, format='%Y-%m-%d')
+#zwrócenie przez funkcję listy z datami
+        return dates2_array
+
+
+# definicja tworząca listę z kursami waluty  z podanego przez użytkownika przedziału czasowego
+    def values2(self):
+# utworzenie listy
+        values2_array = []
+# wczytanie waluty, daty początkowej i daty końcowej podanej przez użytkownika
+        code = self.combobox_dates.get()
+        start_date = self.startDate_entry.get()
+        end_date = self.endDate_entry.get()
+# pobranie kursów waluty z podanego zakresu
+        adres_values2 = f"http://api.nbp.pl/api/exchangerates/rates/A/{code}/{start_date}/{end_date}/"
+        body_values2 = requests.get(adres_values2)
+        response_values2 = body_values2.json()
+        if code == response_values2['code']:
+#odszukanie danej waluty
+            for i in range(len(response_values2["rates"])):
+                value2 = response_values2["rates"][i]["mid"]
+# dodawanie kolejnych wartości kursów do listy
+                values2_array.append(value2)
+#zwrócenie przez funkcję listy z walutami
+            return values2_array
+
+
+# rysowanie wykresu
+    def wykres(self):
+# utworzenie pola
+        plt.figure()
+# nadanie tytułu osi x
+        plt.xlabel('Daty', fontsize=16)
+# podanie wartości x i y
+        plt.plot(self.dates2(), self.values2())
+# utworzenie okna na pełen ekran
+        mng = plt.get_current_fig_manager()
+        mng.window.state('zoomed')
+# wyświetlenie wykresu
+        plt.show()
+
+
+# funkcje rysujące wykres i linię trendu z ostatnich ... dni
+    def linia_trendu(self):
+# wczytanie ilości dni a następnie wybranego kursu
+        rates_number = int(self.rates_number_entry.get())
+        currency_trend = self.combobox_trend.get()
+# utworzenie listy
+        dates_array = []
+# pobranie kursów waluty z ostatnich ... dni
+        adresdate = f"http://api.nbp.pl/api/exchangerates/rates/A/{currency_trend}/last/{rates_number}/"
+        bodydate = requests.get(adresdate)
+        responsedate = bodydate.json()
+        if currency_trend == responsedate['code']:
+# odszukanie danej waluty
+            for i in range(0, rates_number):
+                date = responsedate["rates"][i]["effectiveDate"]
+# dodawanie kolejnych dat do listy
+                dates_array.append(date)
+
+        values_array = []
+        adresvalue = f"http://api.nbp.pl/api/exchangerates/rates/A/{currency_trend}/last/{rates_number}/"
+        bodyvalue = requests.get(adresvalue)
+        responsevalue = bodyvalue.json()
+        if currency_trend == responsevalue['code']:
+            for i in range(0, rates_number):
+                value = responsevalue["rates"][i]["mid"]
+# dodawanie kolejnych wartości kursów do listy
+                values_array.append(value)
+
+
+# obliczenia dla lini trendu
+        ny = []  # wyrównanie wykładnicze- nowa dane dla osi y
+        y = float(values_array[0])
+        ny.append(y)
+        t = 1
+        while t < int(float(rates_number)):
+            y = 0.2 * values_array[t] + 0.8 * y
+            ny.append(y)
+            t += 1
+
+        time = []
+        for i in range(1, rates_number + 1):
+            time.append(i)
+
+        x_mean = rates_number / 2
+        sum_xs = 0
+        for i in range(0, rates_number):
+            xs = (time[i] - x_mean) ** 2
+            sum_xs += xs
+
+        y_mean = sum(ny) / len(ny)
+        sum_xy = 0
+        for i in range(0, rates_number):
+            xy = (time[i] - x_mean) * (ny[i] - y_mean)
+            sum_xy += xy
+
+        a = sum_xy / sum_xs
+        b = y_mean - a * x_mean
+        trend = []
+        t = 1
+        while t < rates_number + 1:
+            y_trend = a * t + b
+            trend.append(y_trend)
+            t += 1
+
+# utworzenie wykresów z wysokością kursów w ostatnikch ... dniach wraz z linią trendu
+        plt.plot(time, values_array)
+        plt.plot(time, trend)
+# wyświetlenie wykresów
+        plt.show()
+
+
+# Utworzenie egzemplarza klasy CurrencyConverterGUI.
+currency_conv = CurrencyConverterGUI()
+
